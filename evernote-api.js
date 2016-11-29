@@ -107,38 +107,30 @@ function EvernoteApi() {
                 noteStore.listNotebooks(function (err, notebooks) {
 
                     if (err) {
-                        console.log("err:" + JSON.stringify(err));
-                        // process.exit(1);
                         reject(err)
                     }
 
-                    var notebook = null;
-                    for (var i in notebooks) {
-                        if (notebooks[i].name === notebookName) {
-                            notebook = notebooks[i];
-                            break;
-                        }
-                    }
-                    if (!notebook) {
-                        console.log("notebook named " + notebookName + " not found");
-                        // process.exit(1);
-                        reject(new Error("notebook named " + notebookName + " not found"))
-                    }
-                    notebooksCache[notebookName] = notebook;
-                    _createNote(notebook.guid, title, content, created)
-                        .then((note) => {
-                            resolve(note)
-                        })
-                        .catch((err) => {
-                            reject(err)
-                        })
+                    var notebook = (notebooks || []).find((n) => {
+                        return n.name === notebookName
+                    })
 
+                    if (!notebook) {
+                        reject(new Error("notebook named " + notebookName + " not found"))
+                    } else {
+                        notebooksCache[notebookName] = notebook;
+                        _createNote(notebook.guid, title, content, created)
+                            .then((note) => {
+                                resolve(note)
+                            })
+                            .catch((err) => {
+                                reject(err)
+                            })
+                    }
 
                 });
             }
         })
     }
-    // .to(1).per(1000);
 
 
 }
