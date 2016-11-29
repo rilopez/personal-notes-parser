@@ -130,11 +130,11 @@ function exportNotesFromTextFile(diaryPath, evernoteApi) {
             })
             console.log(" notes exported:" + notesExported + " , Readed:" + notes.length, ' diaryPath:' + diaryPath);
             Promise.all(promises)
-                .then(() => {
-                        resolve()
+                .then((notes) => {
+                        resolve(notes)
                 })
-                .catch(() => {
-                    reject()
+                .catch((err) => {
+                    reject(err)
                 })
         });
     })
@@ -143,7 +143,7 @@ function exportNotesFromTextFile(diaryPath, evernoteApi) {
 
 //--- Main program
 
-var sourceDir = '/Users/ilopez/ril/docs/diary';
+var sourceDir = __dirname;
 var evernoteApi = new EvernoteApi();
 
 let parsing = true
@@ -157,12 +157,12 @@ function parse (files) {
     });
 
     Promise.all(promises)
-        .then(() => {
+        .then((notes) => {
             console.log('done');
             parsing = false;
         })
-        .catch(() => {
-            console.log('error');
+        .catch((err) => {
+            console.log(err);
             parsing = false;
         })
 }
@@ -178,6 +178,9 @@ function wait () {
 }
 
 fs.readdir(sourceDir, function (err, files) {
+    if (err) {
+        console.log(err)
+    }
     parse(files)
     wait()
 });

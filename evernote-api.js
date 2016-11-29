@@ -8,7 +8,6 @@ var exports = module.exports = {};
 
 
 
-
 function getClient(authToken, isSandbox, isChina) {
     var client = new Evernote.Client({token: authToken, sandbox: isSandbox, china: isChina});
 
@@ -50,7 +49,7 @@ function textToENML(text) {
 
 
 function EvernoteApi() {
-    var authToken = process.env.EVERNOTE_AUTH_TOKEN || "your developer token";
+    var authToken = "S=s1:U=9321a:E=16008a5feec:C=158b0f4d080:P=1cd:A=en-devtoken:V=2:H=3046fcbba2441bc4fc0f71e87948db05";
     var isSandbox = true;
     var isChina = false;
 
@@ -76,52 +75,70 @@ function EvernoteApi() {
             noteStore.createNote(note, function (err, createdNote) {
                 if (err) {
                     console.log("err: " + JSON.stringify(err));
-                    process.exit(1);
+                    // process.exit(1);
+                    err.note = note
+                    reject(err);
                 } else {
-                    resolve(note)
+                    console.log('note created')
+                    resolve(createdNote)
                 }
 
             });
         })
     }
 
-    this.createNote = limit(function (notebookName, title, content, created) {
-        reqCounter++;
+    this.createNote = function (notebookName, title, content, created) {
+        return new Promise((resolve, reject) => {
+            reqCounter++;
 
-        if (notebooksCache[notebookName]) {
-            console.log("reqCounter: " + reqCounter + " using notebook cache");
-            _createNote(notebooksCache[notebookName].guid, title, content, created);
+            if (notebooksCache[notebookName]) {
+                console.log("reqCounter: " + reqCounter + " using notebook cache");
+                _createNote(notebooksCache[notebookName].guid, title, content, created)
+                    .then((note) => {
+                        resolve(note)
+                    })
+                    .catch((err) => {
+                        reject(err)
+                    })
 
 
-        } else {
-            console.log("reqCounter: " + reqCounter + " without notebook cache");
-            noteStore.listNotebooks(function (err, notebooks) {
+            } else {
+                console.log("reqCounter: " + reqCounter + " without notebook cache");
+                noteStore.listNotebooks(function (err, notebooks) {
 
-                if (err) {
-                    console.log("err:" + JSON.stringify(err));
-                    process.exit(1);
-                }
-
-                var notebook = null;
-                for (var i in notebooks) {
-                    if (notebooks[i].name === notebookName) {
-                        notebook = notebooks[i];
-                        break;
+                    if (err) {
+                        console.log("err:" + JSON.stringify(err));
+                        // process.exit(1);
+                        reject(err)
                     }
-                }
-                if (!notebook) {
-                    console.log("notebook named " + notebookName + " not found");
-                    process.exit(1);
-                }
-                notebooksCache[notebookName] = notebook;
-                _createNote(notebook.guid, title, content, created);
+
+                    var notebook = null;
+                    for (var i in notebooks) {
+                        if (notebooks[i].name === notebookName) {
+                            notebook = notebooks[i];
+                            break;
+                        }
+                    }
+                    if (!notebook) {
+                        console.log("notebook named " + notebookName + " not found");
+                        // process.exit(1);
+                        reject(new Error("notebook named " + notebookName + " not found"))
+                    }
+                    notebooksCache[notebookName] = notebook;
+                    _createNote(notebook.guid, title, content, created)
+                        .then((note) => {
+                            resolve(note)
+                        })
+                        .catch((err) => {
+                            reject(err)
+                        })
 
 
-            });
-        }
-
-
-    }).to(1).per(1000);
+                });
+            }
+        })
+    }
+    // .to(1).per(1000);
 
 
 }
