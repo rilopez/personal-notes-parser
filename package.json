@@ -1,0 +1,30 @@
+{
+  "name": "personal-notes-parser",
+  "version": "1.0.0",
+  "description": "parse a personal notes file",
+  "main": "note-parser.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/rilopez/personal-notes-parser.git"
+  },
+  "keywords": [
+    "parser"
+  ],
+  "author": "isaac lopez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/rilopez/personal-notes-parser/issues"
+  },
+  "homepage": "https://github.com/rilopez/personal-notes-parser#readme",
+  "dependencies": {
+    "applescript": "^1.0.0",
+    "install": "^0.8.2",
+    "line-by-line": "^0.1.5",
+    "moment": "^2.17.0",
+    "simple-rate-limiter": "^0.2.3",
+    "underscore": "^1.8.3"
+  }
+}
