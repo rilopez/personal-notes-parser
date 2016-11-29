@@ -66,20 +66,23 @@ function EvernoteApi() {
     var reqCounter = 0;
 
     function _createNote(notebookGuid, title, content, created) {
-        var note = new Evernote.Note();
-        note.notebookGuid = notebookGuid;
-        note.title = title;
-        note.content = textToENML(content);
-        note.created = created;
+        return new Promise((resolve, reject) => {
+            var note = new Evernote.Note();
+            note.notebookGuid = notebookGuid;
+            note.title = title;
+            note.content = textToENML(content);
+            note.created = created;
 
-        noteStore.createNote(note, function (err, createdNote) {
-            if (err) {
-                console.log("err: " + JSON.stringify(err));
-                process.exit(1);
+            noteStore.createNote(note, function (err, createdNote) {
+                if (err) {
+                    console.log("err: " + JSON.stringify(err));
+                    process.exit(1);
+                } else {
+                    resolve(note)
+                }
 
-            }
-
-        });
+            });
+        })
     }
 
     this.createNote = limit(function (notebookName, title, content, created) {
@@ -125,7 +128,3 @@ function EvernoteApi() {
 
 
 exports.EvernoteApi = EvernoteApi;
-
-
-
-
