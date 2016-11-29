@@ -1,0 +1,176 @@
+05/13/2008 12:02:00 ------------------------------- 
+    - se tienen problemas de servicios , SAP no esta listo
+    - Janus QA tiene los datos de conexion a SAP QA erroneos se actualizan los
+	datos
+		    Datos conexion a SG
+
+		      <add key="SAP_HOST" value="laemsd00.smx.pep.pemex.com" />
+		      <add key="SAP_SYSTEM" value="30" />
+		      <add key="SAP_CLIENT" value="900" />
+		      <add key="SAP_USERNAME" value="JANUS" />
+		      <add key="SAP_PASSWORD" value="INICIAL" />
+
+		    Datos conexion a SAP QDF  (SAP QA)
+						 laemsd00.smx.pep.pemex.com
+		      <add key="SAP_HOST" value="laemsd00.smx.pep.pemex.com" />
+		      <add key="SAP_SYSTEM" value="30" />
+		      <add key="SAP_CLIENT" value="900" />
+		      <add key="SAP_USERNAME" value="JANUS" />
+		      <add key="SAP_PASSWORD" value="inicio" />
+   - se migra el contrato 4202188422 con los datos 
+        ==DETALLE
+        Núm. Contrato: 420218842
+	Descripción: PRUEBA
+	Fecha Inicio Programado: 14/05/2008
+	Fecha Término Programado: 21/08/2008
+	Plazo: 99
+	Estatus: VIG
+ 
+	==Contratos SAP
+
+		Moneda	Núm. Contrato SAP	Monto	Tipo de cambio	Org. de compras
+		USD	4202188422	1000020000.00	1.0000	SMEX
+
+	Contratistas
+	No. Proveedor SAP	Nombres
+	0000300476	INSTITUTO MEXICANO DEL PETROLEO
+GG
+	==Direccionamientos Presupuestales
+
+	No existe ningun Número de contrato SAP asociado a este contrato
+
+	== Icono - F
+		No. Seg. Imp.	Tipo Imp.	No. Orden	No. Principal Activo Fijo	Sub Núm. Activo Fijo	Elemento PEP	Núm. Grafo Imp	Pos. Presup.	Centro Gestor	Fondo	Ejercicio	Cuenta Mayor	Desc. Cuenta Mayor
+		01	U	 	 	 	P/440-A00-R01KZ -1-06	 	308301801	25339142	PIDIREGAS	2008	0062070073	REF.Y AC.EQ.DIVERSO
+		02	U	 	 	 	P/440-A00-R01KZ -1-06	 	308301801	25339142	PIDIREGAS	2008	0062070073	REF.Y AC.EQ.DIVERSO
+ 
+ 
+ 
+ 06/03/2008 14:00:00 ----------------------------------------
+ platica telefonica con programadoi ABAP  para acordar la bapi de entrega de bapi de modificacion de pedidos, 
+    - ellos documentarán y enviarán las espec
+    - mantendran la misma firma de janus carga para la nueva BAPI
+    
+06/03/2008 05:03:00 -----------------------------------------   
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ Programa de Recompensas
+<A HREF="    	Usted Podrá elegir uno de nuestros programas de recompensas: 1. Reembolso en efectivo en donde le regresamos el 5% de la compras que realice con su Tarjeta de Crédito HSBC Premier MasterCardR y el 1% de las compras que realice con su Tarjeta de Débito HSBC Premier. (4) 
+2. Acceso al programa de Millas(5) HSBC donde por cada dólar(6) de compra o su equivalente en moneda nacional usted acumulará una milla. Usted podrá intercambiar estas millas por noches gratis en los hoteles(7) Fiesta Americana Grand, Fiesta Americana y Fiesta Inn, en sus más de 55 hoteles de ciudad o playa, o por boletos de avión al transferir sus millas a los programas afiliados. En caso de desear el programa de Millas se deberán comunicar al Centro de Atención Premier al 5721 33 89 o lada sin costo al 01 800 716 3541 o con nosotros.
+"></A>     
+ 
+ 
+ 
+     
+ 
+ 
+ --------------------------------------------------------------
+   URL de Enterprise Manager Database Control - (orcl) :
+dsa
+   http://1.1.2.35:1158/em
+   
+   Los archivos de configuración de la base de datos se han instalado en C:\oracle\ mientras que los demás componentes seleccionados se han instalado en C:\oracle\. Tenga cuidado de no suprimir por accidente estos archivos de configuración.
+   La dirección URL de iSQL*Plus es:
+   http://1.1.2.35:5560/isqlplus
+   
+   La dirección URL de DBA de iSQL*Plus es:
+   http://1.1.2.35:5560/isqlplus/dba
+
+05/07/2008 12:09:00 ------------------------------------ 
+
+
+JN-819 --- Agregar integridad referencial a las llaves foraneas de la tabla importes contratos
+	ALTER TABLE [dbo].[IMPORTES_CONTRATOS]
+		ADD CONSTRAINT [IMPORTES_CONTRATOS_fkTIPO_MONEDA] FOREIGN KEY ([CVE_TIPO_MONEDA]) 
+		  REFERENCES [CAT_TIPO_MONEDA].[dbo] ([CVE_TIPO_MONEDA]) 
+		  ON UPDATE CASCADE
+		  ON DELETE NO ACTION
+		GO   
+delete  from importes_contratos 
+where not exists
+( select  cat_contratos.cve_contrato from cat_contratos
+ where cat_contratos.cve_contrato = importes_contratos.cve_contrato)
+GO 	
+ ALTER TABLE [dbo].[IMPORTES_CONTRATOS]
+	ADD CONSTRAINT [IMPORTES_CONTRATOS_fkCVE_CONTRATO] FOREIGN KEY ([CVE_CONTRATO])
+	  REFERENCES [dbo].[CAT_CONTRATOS] ([CVE_CONTRATO])
+	  ON UPDATE CASCADE
+	  ON DELETE CASCADE
+	GO
+--------------------------------------------
+//---- 03/31/2008 8:31 a.m.	
+
+[ ] : agregar el llamado a la bapi ZBAPI_MM_PO_JANUS al terminar  el envio de anexos
+   nueva tabla en repo 
+	CREATE TABLE [dbo].[PEDIDOS_SAP] (
+	  [NUM_PEDIDO] varchar(10) COLLATE Modern_Spanish_CI_AS NOT NULL,
+	  [CVE_CONTRATO] bigint NOT NULL,
+	  [CVE_ANEXO] bigint NULL,
+	  PRIMARY KEY CLUSTERED ([NUM_PEDIDO]),
+	  CONSTRAINT [PEDIDOS_SAP_fkContratos] FOREIGN KEY ([CVE_CONTRATO]) 
+	  REFERENCES [dbo].[CAT_CONTRATOS] ([CVE_CONTRATO]) 
+	  ON UPDATE CASCADE
+	  ON DELETE CASCADE,
+	  CONSTRAINT [PEDIDOS_SAP_fkANEXOS] FOREIGN KEY ([CVE_ANEXO]) 
+	  REFERENCES [dbo].[ANEXOS] ([CVE_ANEXO]) 
+	  ON UPDATE CASCADE
+	  ON DELETE CASCADE
+	)
+	ON [PRIMARY]
+	GO
+15/03/2008 ---------------------------------------------------------------------------------
+[X]@janus el esqueleto para enviar generadores/estimaciones
+[X]@personal Crear una imagen de Gears
+[X]@janus Codificar las pruebas y el esqueleto para enviar generadores/estimaciones
+[X]@personal Checar el seguro de vida y de educación con heidi.
+        - se cancela el seguro de educación
+        - quedo en enviarme hoy los detalles del seguro de vida
+          
+4624
+
+P/440-D0S-P012A41-0-4Z
+
+
+//--06/26/2008 12:49:00 ---------------------------------
+vaca
+    Franklin: 28 julio al 1 de octubre
+    hernan :   4 - 8 Agosto
+    Isaac : 1 al 10 de octubre.
+  
+  5571.70
+  
+22/11/2008 07:54:40 -------------------------------------
+[x] buscar keyword selector tool
+[x] merrian website o alguna herramienta de pronunciación.
+[x] visual thesaureuso, relaciones entre palabras y sonidos ds
+[x] marketleaps, para buscar tus posiciones en los buscadores.
+[x] enquiros engine para reportes de SEO
+[x] Bruce Clay, inc  el gorila de la publicidad en INTERNET y SEO
+    [x]  verificar el Single-page Keyword Density analyzer
+*  se debe encontrar una lista de palabras clave y resaltarlas en META
+  TITLE, etc.
+
+[x] investigarthe digital millennium copyright
+
+//--- 2015-03-14T11:04:43 ---------------------------------------------
+
+
+Marshall Goldsmith on How to be Happy and Let Go of Guilt
+https://www.youtube.com/watch?v=XU7Xy8x9xUo
+
+how to be happy
+
+  - for the next minutes forget
+     - be productive
+     - learn something
+     - improve
+     - worry about somebody
+
+
+-----------------------------------------------------------------------//
