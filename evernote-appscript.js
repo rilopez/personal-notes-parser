@@ -1,37 +1,34 @@
-var applescript = require("applescript");
-var exports = module.exports = {};
+const applescript = require("applescript");
+const moment = require('moment');
 
-function _createNote(notebook, title, content, timestamp){
-
-var
-    script = 'tell application "Evernote" to create note title ' + JSON.stringify(title)
-           +' with text '+ JSON.stringify(content)
-         + ' notebook ' + JSON.stringify(notebook);
+//const isoConvert
 
 
+function _createNote(notebook, title, content, timestamp,onSucced, onError) {
 
-    console.log('--------------------------');
-    console.log(script);
+    let dateStr = moment(timestamp).format("MM/DD/YYYY");
+    let timeStr = moment(timestamp).format("HH:mm");
+    let
+        script = 'tell application "Evernote" to create note title ' + JSON.stringify(title)
+            + ' with html ' + JSON.stringify("<pre>"+  content+"</pre>")
+            + ' notebook ' + JSON.stringify(notebook)
+            + ' created date ' + JSON.stringify(dateStr + " at " + timeStr);
 
-    applescript.execString(script, function(err, rtn) {
-        var _script = script;
+
+    applescript.execString(script, function (err, rtn) {
+        let _script = script;
         if (err) {
             // Something went wrong!
-            console.log(_script);
-            throw err;
+            onError(err,_script);
+        }else{
+            onSucced(rtn)
         }
 
-        console.log("rtn:", JSON.stringify(rtn));
+
     });
-
-
 }
 
 
-
-
-
-
-exports.createNote= _createNote;
+module.exports.createNote = _createNote;
 
 

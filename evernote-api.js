@@ -1,13 +1,12 @@
 var fs = require('fs');
 var crypto = require('crypto');
-var Evernote = require('evernote').Evernote;
+var Evernote = require('evernote');
 var xmlbuilder = require('xmlbuilder');
 var _ = require('underscore');
-var limit = require("simple-rate-limiter");
 var exports = module.exports = {};
 
 
-
+//TODO all this code needs to be updated to latest evernote api changes
 function getClient(authToken, isSandbox, isChina) {
     var client = new Evernote.Client({token: authToken, sandbox: isSandbox, china: isChina});
 
@@ -25,7 +24,6 @@ function getClient(authToken, isSandbox, isChina) {
             }
         }
     );
-
     return client;
 }
 
@@ -34,7 +32,6 @@ function textToENML(text) {
     var xml = xmlbuilder.create('en-note', {version: '1.0', encoding: 'UTF-8', standalone: false},
         {sysID: 'http://xml.evernote.com/pub/enml2.dtd'},
         {allowSurrogateChars: true});
-
 
     xml.ele("pre").txt(text);
 
@@ -76,7 +73,7 @@ function EvernoteApi() {
                 if (err) {
                     console.log("err: " + JSON.stringify(err));
                     // process.exit(1);
-                    err.note = note
+                    err.note = note;
                     reject(err);
                 } else {
                     console.log('note created')
@@ -105,7 +102,6 @@ function EvernoteApi() {
             } else {
                 console.log("reqCounter: " + reqCounter + " without notebook cache");
                 noteStore.listNotebooks(function (err, notebooks) {
-
                     if (err) {
                         reject(err)
                     }
@@ -131,9 +127,6 @@ function EvernoteApi() {
             }
         })
     }
-
-
 }
-
 
 exports.EvernoteApi = EvernoteApi;

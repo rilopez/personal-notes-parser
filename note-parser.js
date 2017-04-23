@@ -1,14 +1,18 @@
-var fs = require('fs');
-var path = require('path');
-var LineByLineReader = require('line-by-line');
-var _ = require('underscore');
-var moment = require('moment');
+const fs = require('fs');
+const path = require('path');
+const LineByLineReader = require('line-by-line');
+const _ = require('underscore');
+const moment = require('moment');
+const util = require('util');
+const Datastore = require('nedb');
+const crypto = require('crypto');
+const config = require('./config');
 
-var EvernoteApi = require('./evernote-api.js').EvernoteApi;
+const IS_LINE_REGEX = new RegExp("-{4,}");
+const IS_LINE_NOTE_START = new RegExp("\/\/-{2,}");
 
+const db = new Datastore({filename: config.dbPath, autoload: true});
 
-var IS_LINE_REGEX = new RegExp("-{4,}");
-var IS_LINE_NOTE_START = new RegExp("\/\/-{2,}");
 
 function tryToExtractTimestamp(textLine) {
     var yearReg = '(20[0-1][0-9])';            ///< Allows a number between 2014 and 2029
@@ -68,119 +72,93 @@ function getLineInfo(textLine) {
     return info;
 }
 
-function exportNotesFromTextFile(diaryPath, evernoteApi) {
-    return new Promise((resolve, reject) => {
-        var row = 0;
-        var notes = [];
-        var currentNote = {text: ""};
-        var previousDashInfo;
-        var lastKnownTimestamp = null;
-        var notesExported = 0;
+function exportNotesFromTextFile(diaryPath) {
+    var row = 0;
+    var notes = [];
+    var currentNote = {text: ""};
+    var previousDashInfo;
+    var lastKnownTimestamp = null;
 
+    var parsedFilename = path.basename(diaryPath, ".txt");
 
-        notes.push(currentNote);
-        var lr = new LineByLineReader(diaryPath, {skipEmptyLines: false});
-        lr.on("open", function () {
-            console.log('exporting notes in :' + diaryPath);
+    notes.push(currentNote);
+    var lr = new LineByLineReader(diaryPath, {skipEmptyLines: false});
+    lr.on("open", function () {
+        console.log('exporting notes in :' + diaryPath);
 
-        });
-        lr.on('error', function (err) {
-            console.log('ERROR exporting notes in :' + diaryPath);
-            throw err;
-        });
+    });
+    lr.on('error', function (err) {
+        console.log('ERROR exporting notes in :' + diaryPath);
+        throw err;
+    });
+    lr.on('line', function (line) {
+        var lineInfo = getLineInfo(line);
 
+        lineInfo.row = ++row;
+        if (lineInfo.timestamp) {
+            lastKnownTimestamp = lineInfo.timestamp;
+        }
 
-        lr.on('line', function (line) {
-            var lineInfo = getLineInfo(line);
+        if (lineInfo.timestamp || lineInfo.isNoteStart) {
+            var noteTimestamp = lineInfo.timestamp || lastKnownTimestamp;
+            var momentNote = (noteTimestamp ? noteTimestamp : moment());
+            var timestampStr = momentNote.toISOString();
+            currentNote = {
+                md5: null,
+                evernoteGuid: null,
+                isSyncWithEvernote: false,
+                timestamp: timestampStr,
+                diaryName: parsedFilename,
+                text: "",
+                noteNumber:notes.length
+            };
+            notes.push(currentNote);
+        }
+        currentNote.text += line + "\n";
+        previousDashInfo = lineInfo;
+    });
 
-            lineInfo.row = ++row;
-            if (lineInfo.timestamp) {
-                lastKnownTimestamp = lineInfo.timestamp;
-            }
+    lr.on('end', function () {
+        var exportedJsonFile = path.join(config.targetDir, parsedFilename + '.json');
 
-            if (lineInfo.timestamp || lineInfo.isNoteStart) {
-                currentNote = {
-                    timestamp: lineInfo.timestamp || lastKnownTimestamp,
-                    text: ""
+        _.each(notes, function (note) {
+            const hash = crypto.createHash('md5');
+            note.md5 = hash.update(note.text).digest('hex');
+            note.isSyncWithEvernote = false;
+            db.insert(note, function (err, newDoc) {
+                if (err) {
+                    console.log("Error while saving note " + note.title + " ", err);
                 }
-                notes.push(currentNote);
-            }
-
-            currentNote.text += line + "\n";
-            previousDashInfo = lineInfo;
+            });
         });
 
-        lr.on('end', function () {
-
-            var parsedFilename = path.basename(diaryPath, ".txt");
-
-            const promises = []
-            _.each(notes, function (note) {
-                if (note.text) {
-
-                    notesExported++;
-
-                    var momentNote = (note.timestamp ? note.timestamp : moment());
-                    var timestampStr = momentNote.format("YYYY-MM-DDThh:mm:ss");
-                    var timestamp = momentNote.utc().valueOf();
-                    var noteTitle = parsedFilename + "-" + "note-" + notesExported + " " + timestampStr;
-
-                    promises.push(evernoteApi.createNote("testbook", noteTitle, note.text, timestamp));
-                }
-            })
-            console.log(" notes exported:" + notesExported + " , Readed:" + notes.length, ' diaryPath:' + diaryPath);
-            Promise.all(promises)
-                .then((notes) => {
-                        resolve(notes)
-                })
-                .catch((err) => {
-                    reject(err)
-                })
-        });
-    })
+        fs.writeFileSync(exportedJsonFile, JSON.stringify(notes, null, 2), 'utf-8');
+        console.log(" notes  Readed:" + notes.length, ' diaryPath:' + diaryPath);
+    });
 }
 
 
 //--- Main program
+let indexErrorHandler = function (err) {
+    if (err) {console.error(err)}
+};
 
-var sourceDir = __dirname;
-var evernoteApi = new EvernoteApi();
+db.remove({}, {multi: true}, function (err, numRemoved) {
+    console.log("[cleaning db]  numRemoved: " + numRemoved + " err" + err);
+});
 
-let parsing = true
-function parse (files) {
-    const promises = []
+
+db.ensureIndex({ fieldName: 'isSyncWithEvernote' }, indexErrorHandler);
+db.ensureIndex({ fieldName: 'md5'}, indexErrorHandler);
+db.ensureIndex({ fieldName: 'evernoteGuid'}, indexErrorHandler);
+
+
+
+fs.readdir(config.sourceDir, function (err, files) {
     files.forEach(function (file) {
-        console.log(file);
         if (path.extname(file) == ".txt") {
-            promises.push(exportNotesFromTextFile(path.join(sourceDir, file), evernoteApi));
+            exportNotesFromTextFile(path.join(config.sourceDir, file));
         }
     });
-
-    Promise.all(promises)
-        .then((notes) => {
-            console.log('done');
-            parsing = false;
-        })
-        .catch((err) => {
-            console.log(err);
-            parsing = false;
-        })
-}
-
-function wait () {
-    if (parsing) {
-        setTimeout(() => {
-            wait()
-        }, 1000)
-    } else {
-        process.exit(0)
-    }
-}
-
-fs.readdir(sourceDir, function (err, files) {
-    if (err) {
-        console.log(err)
-    }
-    parse(files)
-    wait()
 });
+
