@@ -5,7 +5,11 @@ Little tool to export my local personal notes to EverNote
 # Overview
 
 Over the years I have been using a simple text file for my personal notes, lately I have been using more and more evernote, so 
-I needed to import my notes to evernot, this project uses a simple ruby script to do it.
+I needed to import my notes to evernote. the general idea is
+
+1. Parse the lousy formatted text notes 
+2. create an intermediate format
+3. Use applescript to import notes into evernote 
 
 
 # Notes Syntax
@@ -43,5 +47,33 @@ A note is wrapped betten dash lines , the begining of the dash line should/could
  ```
 
 
+# Instructions
+
+### 1. Configure
+ 
+ Edit the configuration file `config.js` with your env details
+```
+config.sourceDir = '/Users/ilopez/ril/docs/diary';
+config.targetDir = config.sourceDir;
+config.dbPath= path.join(config.targetDir, "allnotes.nedb");
+
+```
+
+### 2. Run the parser
+ 
+ The parser will read all the text(`*.txt`) files on the directory `config.sourceDir` and generate a nedb database 
+  with all the parsed notes. this nedb will be used by the uploader to mantain the upload status.
+
+```bash
+node note-parser.js
+```
+
+
+### 2. Run the uploader
+ 
+ the uploader will create export to evernote using applescript Evernote commands  
+
+```bash
+node note-uploader.js
 
 

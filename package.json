@@ -21,7 +21,6 @@
   "homepage": "https://github.com/rilopez/personal-notes-parser#readme",
   "dependencies": {
     "applescript": "^1.0.0",
-    "evernote": "2.0.1-beta",
     "install": "^0.8.2",
     "line-by-line": "^0.1.5",
     "moment": "^2.17.0",
