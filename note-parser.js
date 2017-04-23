@@ -69,80 +69,118 @@ function getLineInfo(textLine) {
 }
 
 function exportNotesFromTextFile(diaryPath, evernoteApi) {
-    var row = 0;
-    var notes = [];
-    var currentNote = {text: ""};
-    var previousDashInfo;
-    var lastKnownTimestamp = null;
-    var notesExported = 0;
+    return new Promise((resolve, reject) => {
+        var row = 0;
+        var notes = [];
+        var currentNote = {text: ""};
+        var previousDashInfo;
+        var lastKnownTimestamp = null;
+        var notesExported = 0;
 
 
-    notes.push(currentNote);
-    var lr = new LineByLineReader(diaryPath, {skipEmptyLines: false});
-    lr.on("open", function () {
-        console.log('exporting notes in :' + diaryPath);
+        notes.push(currentNote);
+        var lr = new LineByLineReader(diaryPath, {skipEmptyLines: false});
+        lr.on("open", function () {
+            console.log('exporting notes in :' + diaryPath);
 
-    });
-    lr.on('error', function (err) {
-        console.log('ERROR exporting notes in :' + diaryPath);
-        throw err;
-    });
+        });
+        lr.on('error', function (err) {
+            console.log('ERROR exporting notes in :' + diaryPath);
+            throw err;
+        });
 
 
-    lr.on('line', function (line) {
-        var lineInfo = getLineInfo(line);
+        lr.on('line', function (line) {
+            var lineInfo = getLineInfo(line);
 
-        lineInfo.row = ++row;
-        if (lineInfo.timestamp) {
-            lastKnownTimestamp = lineInfo.timestamp;
-        }
-
-        if (lineInfo.timestamp || lineInfo.isNoteStart) {
-            currentNote = {
-                timestamp: lineInfo.timestamp || lastKnownTimestamp,
-                text: ""
+            lineInfo.row = ++row;
+            if (lineInfo.timestamp) {
+                lastKnownTimestamp = lineInfo.timestamp;
             }
-            notes.push(currentNote);
-        }
 
-        currentNote.text += line + "\n";
-        previousDashInfo = lineInfo;
-    });
-
-    lr.on('end', function () {
-
-        var parsedFilename = path.basename(diaryPath, ".txt");
-
-        _.each(notes, function (note) {
-            if (note.text) {
-
-                notesExported++;
-
-                var momentNote = (note.timestamp ? note.timestamp : moment());
-                var timestampStr = momentNote.format("YYYY-MM-DDThh:mm:ss");
-                var timestamp = momentNote.utc().valueOf();
-                var noteTitle = parsedFilename + "-" + "note-" + notesExported + " " + timestampStr;
-
-                evernoteApi.createNote("testbook", noteTitle, note.text, timestamp);
-
+            if (lineInfo.timestamp || lineInfo.isNoteStart) {
+                currentNote = {
+                    timestamp: lineInfo.timestamp || lastKnownTimestamp,
+                    text: ""
+                }
+                notes.push(currentNote);
             }
-        })
-        console.log(" notes exported:" + notesExported + " , Readed:" + notes.length, ' diaryPath:' + diaryPath);
-    });
+
+            currentNote.text += line + "\n";
+            previousDashInfo = lineInfo;
+        });
+
+        lr.on('end', function () {
+
+            var parsedFilename = path.basename(diaryPath, ".txt");
+
+            const promises = []
+            _.each(notes, function (note) {
+                if (note.text) {
+
+                    notesExported++;
+
+                    var momentNote = (note.timestamp ? note.timestamp : moment());
+                    var timestampStr = momentNote.format("YYYY-MM-DDThh:mm:ss");
+                    var timestamp = momentNote.utc().valueOf();
+                    var noteTitle = parsedFilename + "-" + "note-" + notesExported + " " + timestampStr;
+
+                    promises.push(evernoteApi.createNote("testbook", noteTitle, note.text, timestamp));
+                }
+            })
+            console.log(" notes exported:" + notesExported + " , Readed:" + notes.length, ' diaryPath:' + diaryPath);
+            Promise.all(promises)
+                .then((notes) => {
+                        resolve(notes)
+                })
+                .catch((err) => {
+                    reject(err)
+                })
+        });
+    })
 }
 
 
 //--- Main program
 
-var sourceDir = '/Users/ilopez/ril/docs/diary';
+var sourceDir = __dirname;
 var evernoteApi = new EvernoteApi();
-fs.readdir(sourceDir, function (err, files) {
 
+let parsing = true
+function parse (files) {
+    const promises = []
     files.forEach(function (file) {
         console.log(file);
-        if (path.extname(file) == ".txt")
-        exportNotesFromTextFile(path.join(sourceDir, file), evernoteApi);
-
+        if (path.extname(file) == ".txt") {
+            promises.push(exportNotesFromTextFile(path.join(sourceDir, file), evernoteApi));
+        }
     });
-});
 
+    Promise.all(promises)
+        .then((notes) => {
+            console.log('done');
+            parsing = false;
+        })
+        .catch((err) => {
+            console.log(err);
+            parsing = false;
+        })
+}
+
+function wait () {
+    if (parsing) {
+        setTimeout(() => {
+            wait()
+        }, 1000)
+    } else {
+        process.exit(0)
+    }
+}
+
+fs.readdir(sourceDir, function (err, files) {
+    if (err) {
+        console.log(err)
+    }
+    parse(files)
+    wait()
+});
